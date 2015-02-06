@@ -109,6 +109,9 @@ class ConnectSocialView(JSONMixin, View):
             # The google server doesn't grant the user
             return {'success': False, 'error': "OAuth2 provider don't grant your identity"}
 
+        # Temp line to return the provider response to easily debug
+        return {'success': True, 'message': unicode(result)}
+
         # We don't use get_or_create because if there's more than one entry
         # an exception will be raised. Instead, we try to success silently
         # and send a signal.

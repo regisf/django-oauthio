@@ -5,15 +5,27 @@
 var OAuthIOStart = (function() {
     "use strict";
 
-    function _register_on_server(url, response) {
-        var request = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
-        request.open('POST', url);
-        request.send(response);
+    function _register_on_server(response) {
+        if (response.status && response.status === 'success') {
+	    var request = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+            request.addEventlistener('load', function() {
+
+            }, false);
+
+            request.onload = function(evt) {
+
+            };
+            request.open('POST', url);
+            request.send(JSON.stringify(response.data));
+	    
+	}
+
+
     }
 
-    function _do_err(provider, err) {
-        if (options[provider] && typeof options[provider] == 'function') {
-            options[provider](false, provider, result);
+    function _do_err(cb, err) {
+        if (cb && typeof cb == 'function') {
+            cb(false, result);
         } else {
             console.log(err);
         }

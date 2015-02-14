@@ -117,8 +117,8 @@ var OAuthIOStart = (function() {
                                             access_token: result['access_token'],
                                             email: res['email'],
                                             username: res['name'],
-                                            first_name: res['first_name'],
-                                            last_name: res['last_name'],
+                                            first_name: res['firstname'],
+                                            last_name: res['lastname'],
                                             avatar: res['avatar']
                                         });
                                     })

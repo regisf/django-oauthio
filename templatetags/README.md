@@ -5,11 +5,9 @@ before the `</body>` tag.
 
 ## Settings
 
-In your project `settings.py` file add the key:
+In your project `settings.py` file add the key `OAUTHIO_JAVASCRIPT_SRC` with the URL of the OAuth.io javascript. 
 
-```OAUTHIO_JAVASCRIPT_SRC```
-
-with the URL of the OAuth.io javascript. Example:
+Example:
 
 ```OAUTHIO_JAVASCRIPT_SRC=STATIC_URL + "where/the/script/is/oauthio.min.js```
 

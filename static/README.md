@@ -24,5 +24,5 @@ Don't forget to collect the static files with:
 $ python manage.py collectstatic
 ```
 
-when the configuration is finished
+when the configuration is finished.
 

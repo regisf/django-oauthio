@@ -115,22 +115,32 @@ class ConnectSocialView(JSONMixin, View):
         # We don't use get_or_create because if there's more than one entry
         # an exception will be raised. Instead, we try to success silently
         # and send a signal.
-        user = User.objects.filter(Q(email=email) | Q(username=username))
+        user = User.objects.filter(Q(email=email))
         created = user.count() == 0
 
         if user.count() == 0:
+            # Don't know the user.
+            # Due to the email based retreiving, we seek if the username exists
+            # If yes add the number of username + 1 (e.g.: paul, paul_1, paul_2, ...)
+            user_username = User.objects.filter(username__iregex=r'^{}'.format(username))
+            if user_username.exists():
+                username += "_{}".format(user_username.count() + 1)
+
+            # Create the user
             u = User.objects.create_user(email=email, username=username)
             u.first_name = first_name
             u.last_name = last_name
             u.save()
-
             created = True
 
         elif user.count() == 1:
+            # The user exists. Let's go
             user = user.get()
 
         else:
-            # If there's a single user with two entries: there's a problem
+            # If there's a single user with two entries: there's a problem. We take
+            # the first one and send a signal
+            # FIXME: potential account usurpation.
             user_registration_problem.send(sender=self, user=user, message="Multiple user entry.")
             user = user[0]
 

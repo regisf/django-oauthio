@@ -10,6 +10,7 @@ def oauthio_install_javascript():
     """
     Get the javascript file for Oauth.io
     :return: A script tag
+    :rtype: str
     """
     tpl = '<script type="text/javascript" src="{0}"></script>'
 #    if getattr(settings, "DEBUG", False):

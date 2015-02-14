@@ -20,31 +20,52 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+    
 var OAuthIOStart = (function() {
     "use strict";
 
+    function getCookie_(key) {
+        if (document.cookie) {
+            var cookies = document.cookie.split(';'), keyVal;
+            for (var i in cookies) {
+                keyVal = cookies[i].split('=');
+                if (keyVal[0] == 'csrftoken') {
+                    return keyVal[1];
+                }
+            }
+        }
+        return "";
+    }
+
     // Setup default behaviour
     var options_ = {
+        // Where to send the data
+        url: null,
+
         // Connected with the provider
-        done: function(provider, result) {
-            if (result.status && result.status === 'success') {
+        done: function(result) {
+            if (this.url) {
                 var request = new XMLHttpRequest();
                 var self=this;
 
-                request.onerror = function (e) {self.error(provider, e.responseText)};
+                request.onerror = function (e) {self.error(result['provider'], e.responseText)};
 
                 request.onreadystatechange = function (e) {
                     if (request.readyState === 4) {
                         if (request.status === 200) {
-                            self.success(provider, result);
+                            self.success(result['provider'], result);
                         } else {
-                            self.error(provider, e.responseText);
+                            self.error(result['provider'], e.responseText);
                         }
                     }
                 };
 
-                request.open('POST', url);
-                request.send(JSON.stringify(result.data));
+                request.open('POST', this.url);
+                request.setRequestHeader('Content-Type', 'application/json');
+                request.setRequestHeader('X-CSRFToken',getCookie_('csrftoken'));
+                request.send(JSON.stringify(result));
+            } else {
+                console.error("No url for server registration");
             }
         },
 
@@ -60,8 +81,11 @@ var OAuthIOStart = (function() {
 
     return function (options) {
         if (options.public_key === undefined) {
+            var msg = "OAuth.io public key is not set";
             if (options.debug === true) {
-                alert("OAuth.io public key is not set");
+                alert(msg);
+            } else {
+                console.error(msg);
             }
             return;
         }
@@ -82,17 +106,26 @@ var OAuthIOStart = (function() {
                     el.onclick = function (event) {
                         event.preventDefault();
                         var provider = el.getAttribute("data-oauthio-provider");
+
                         OAuth.popup(provider)
                             .done(function (result) {
                                 result.me()
-                                    // OK Everythings goes fine
-                                    .done(function(result) {
-                                        options_.done(provider, result);
+                                    // OK Everythings goes fine. Send all needed information to the server
+                                    .done(function(res) {
+                                        options_.done({
+                                            provider: provider,
+                                            access_token: result['access_token'],
+                                            email: res['email'],
+                                            username: res['name'],
+                                            first_name: res['first_name'],
+                                            last_name: res['last_name'],
+                                            avatar: res['avatar']
+                                        });
                                     })
-
                                     // The me() request failed
                                     .fail(function(err) {options_.fail(provider, err)});
                             })
+
                             // The popup failed
                             .fail(function(err) {options_.fail(provider, err)});
                     };

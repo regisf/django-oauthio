@@ -93,9 +93,12 @@ class ConnectSocialView(JSONMixin, View):
 
     def post_data(self, request, data):
         access_token = data['access_token']
-        email = data['email']
-        name = data['name']
-        provider = data['provider']
+        email = data['email'] if 'email' in data else None
+        username = data['name'] if 'name' in data else None
+        first_name = data['first_name'] if 'first_name' in data else ''
+        last_name = data['last_name'] if 'last_name' in data else ''
+        avatar = data['avatar'] if 'avatar' in data else ''
+        provider = data['provider'] if 'provider' in data else None
 
         if provider in PROVIDERS.keys():
             url = PROVIDERS[provider]
@@ -109,17 +112,18 @@ class ConnectSocialView(JSONMixin, View):
             # The google server doesn't grant the user
             return {'success': False, 'error': "OAuth2 provider don't grant your identity"}
 
-        # Temp line to return the provider response to easily debug
-        return {'success': True, 'message': unicode(result)}
-
         # We don't use get_or_create because if there's more than one entry
         # an exception will be raised. Instead, we try to success silently
         # and send a signal.
-        user = User.objects.filter(Q(email=email) | Q(username=name))
+        user = User.objects.filter(Q(email=email) | Q(username=username))
         created = user.count() == 0
 
         if user.count() == 0:
-            User.objects.create_user(email=email, username=name)
+            u = User.objects.create_user(email=email, username=username)
+            u.first_name = first_name
+            u.last_name = last_name
+            u.save()
+
             created = True
 
         elif user.count() == 1:
@@ -130,6 +134,6 @@ class ConnectSocialView(JSONMixin, View):
             user_registration_problem.send(sender=self, user=user, message="Multiple user entry.")
             user = user[0]
 
-        user_signed_in.send(sender=self, user=user, created=created)
+        user_signed_in.send(sender=self, user=user, created=created, avatar=avatar)
 
         return {'success': True}

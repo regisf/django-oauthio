@@ -1,12 +1,33 @@
 # -*- coding: UTF-8 -*-
+# OAuth.io service for Django
+# (c) Régis FLORET 2015 and later
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
 """
-OAuth.io service for Django
-(c) Régis FLORET 2015 and later
-
+Using oauth.io services with Django.
 """
 
 __author__ = 'Regis FLORET'
+__version__ = '1.0'
+__license__ = 'MIT'
+
 
 import json
 import httplib2
@@ -14,15 +35,19 @@ import httplib2
 from django.views.generic import View
 from django.http import HttpResponse
 from django.contrib.auth.models import User
+from django.contrib.auth import login
 from django.db.models import Q
 
 from .signals import user_signed_in, user_registration_problem
 
 
 def convert_request_to_json(request):
-    """ Convert a request to a json object. The request could be in the query
+    """
+    Convert a request to a json object. The request could be in the query
     http://somewhe.re/?json=[JSON.stringify object] or in the body.
+
     :param request: The web request
+    :rtype request: HttpRequest
     :return The data or an empty dictionnary
     :rtype dictionnary
     """
@@ -40,74 +65,74 @@ def convert_request_to_json(request):
 
     return data_json or {}
 
-
-class JSONMixin(object):
-    """
-    The JSON View allow to respond  a json data
-    """
-
-    def get(self, request):
-        return HttpResponse(
-            json.dumps(
-                self.get_data(request, convert_request_to_json(request)),
-                ensure_ascii=False
-            ),
-            content_type="application/json"
-        )
-
-    def post(self, request):
-        return HttpResponse(
-            json.dumps(
-                self.post_data(request, convert_request_to_json(request)),
-                ensure_ascii=False
-            ),
-            content_type="application/json"
-        )
-
-    def get_data(self, request, data):
-        raise NotImplementedError("This method might be implemented")
-
-    def post_data(self, request, data):
-        raise NotImplementedError('This method might be implemented')
-
-
+#
+# All the known providers control URL
+# TODO: In a separate file due to the huge oauth.io provider collection
+#
 PROVIDERS = {
     'facebook': 'https://graph.facebook.com/me?fields=id&access_token={}',
     'google_plus': 'https://www.googleapis.com/plus/v1/people/me?access_token={}',
     'linkedin': 'https://api.linkedin.com/v1/people/~?oauth2_access_token={}&format=json',
     'twitter': 'https://api.twitter.com/oauth/access_token',
     'yahoo': 'http://social.yahooapis.com/v1/user/{}/profile?format=json',
-    #'live': ''
+    # 'live': ''
 }
 
 
-class ConnectSocialView(JSONMixin, View):
+class ConnectSocialView(View):
     """
+    Create and Connect an user comming from social network
 
+    Implements only POST method.
     """
-    def get_data(self, request, data):
-        """
-        Avoid IDE claims
-        """
-        super(ConnectSocialView, self).get(request)
+    def post(self, request):
+        return HttpResponse(
+            json.dumps(
+                self._post_data(request, convert_request_to_json(request)),
+                ensure_ascii=False
+            ), content_type="application/json"
+        )
 
-    def post_data(self, request, data):
-        access_token = data['access_token']
-        email = data['email'] if 'email' in data else None
-        username = data['name'] if 'name' in data else None
+    def _post_data(self, request, data):
+        """
+        Process to the connection.
+
+        If the user exists, just login else create h{im,er}
+
+        :param request: The django request object
+        :param data: The data coming from the provider via the user browser
+        :type request: HttpRequest
+        :type data: dict
+        :return: A dictionnary containing at least the key success which is True on success
+        :rtype: dict
+        """
+
+        # access_token, email and username are required
+        # So if one of these aren't present, the app raise a error 500
+        try:
+            access_token = data['access_token']
+            email = data['email']
+            username = data['username']
+        except KeyError:
+            return {'success': False, "error": "Missing required field"}
+
+        # Optionnal
         first_name = data['first_name'] if 'first_name' in data else ''
         last_name = data['last_name'] if 'last_name' in data else ''
         avatar = data['avatar'] if 'avatar' in data else ''
-        provider = data['provider'] if 'provider' in data else None
+        provider = data['provider'] if 'provider' in data else ''
 
+        # Get the provider's confirmation url
         if provider in PROVIDERS.keys():
             url = PROVIDERS[provider]
         else:
             return {'success': False, 'error': "Unknow provider"}
 
+        # Ask to the provider if the access_token exists and is valid
         http = httplib2.Http()
         result = http.request(url.format(access_token), 'GET')[0]
 
+        # The provider don't return a 200 status code on error
         if result['status'] != '200':
             # The google server doesn't grant the user
             return {'success': False, 'error': "OAuth2 provider don't grant your identity"}
@@ -144,6 +169,7 @@ class ConnectSocialView(JSONMixin, View):
             user_registration_problem.send(sender=self, user=user, message="Multiple user entry.")
             user = user[0]
 
+        login(request=request, user=user)
         user_signed_in.send(sender=self, user=user, created=created, avatar=avatar)
 
         return {'success': True}

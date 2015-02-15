@@ -22,9 +22,39 @@
 
 
 """
-No models. Here for tests
+Model for users authenticated with social network
 """
 
 __author__ = 'Regis FLORET'
 __version__ = '1.0'
 __license__ = 'MIT'
+
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils.translation import ugettext_lazy as _
+
+
+class OAuthioUser(models.Model):
+    """
+    This model is by the authentication backend.
+    see ./backend.py
+    """
+
+    # Django user assocation
+    user = models.ForeignKey(
+        User,
+        verbose_name=_("User"),
+        help_text=_("The django framework username"),
+        db_index=True
+    )
+
+    # From which social network did the user come
+    provider = models.CharField(
+        max_length=20,
+        verbose_name=_("Provider"),
+        help_text=_("From which Social network the user comes")
+    )
+
+
+    def __unicode__(self):
+        return self.user.username

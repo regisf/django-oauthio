@@ -22,9 +22,28 @@
 
 
 """
-No models no admin
+Admin representation
 """
 
 __author__ = 'Regis FLORET'
 __version__ = '1.0'
 __license__ = 'MIT'
+
+from django.contrib import admin
+
+from .models import OAuthioUser
+
+
+class OAuthioUserAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'provider'
+        )
+
+    search_fields = (
+        'user__username',
+        'user__email'
+        'provider'
+    )
+
+admin.site.register(OAuthioUser, OAuthioUserAdmin)

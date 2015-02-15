@@ -21,16 +21,24 @@
 # THE SOFTWARE.
 
 """
-Signals for the application
+Authentication backend
 """
 
-__author__ = 'Regis FLORET'
-__version__ = '1.0'
-__license__ = 'MIT'
+from .models import OAuthioUser
 
-import django.dispatch
 
-oauthio_user_signin = django.dispatch.Signal(providing_args=('user','created', 'avatar', ))
-user_registration_problem = django.dispatch.Signal(providing_args=('user', 'message'))
+class OAuthIOBackend(object):
+    def authenticate(self, user, provider):
+        oauth_user = OAuthioUser.objects.filter(user=user, provider=provider)
+        return oauth_user.get().user if oauth_user.exists() and oauth_user.count() == 1 else None
 
-print "oauthio", oauthio_user_signin
+    def get_user(self, user_id):
+        """
+        return the user from the user id
+        :param user_id: The user pk
+        :return: The user model or none
+        """
+        oauth_user = OAuthioUser.objects.filter(user__id=user_id)
+        if oauth_user.exists():
+            return oauth_user.get().user
+        return None

@@ -28,17 +28,17 @@ __author__ = 'Regis FLORET'
 __version__ = '1.0'
 __license__ = 'MIT'
 
-
 import json
-import httplib2
 
+import httplib2
 from django.views.generic import View
 from django.http import HttpResponse
 from django.contrib.auth.models import User
-from django.contrib.auth import login
+from django.contrib.auth import login, authenticate
 from django.db.models import Q
 
-from .signals import user_signed_in, user_registration_problem
+from .signals import oauthio_user_signin, user_registration_problem
+from .models import OAuthioUser
 
 
 def convert_request_to_json(request):
@@ -141,7 +141,7 @@ class ConnectSocialView(View):
         # an exception will be raised. Instead, we try to success silently
         # and send a signal.
         user = User.objects.filter(Q(email=email))
-        created = user.count() == 0
+        created = False
 
         if user.count() == 0:
             # Don't know the user.
@@ -158,6 +158,9 @@ class ConnectSocialView(View):
             u.save()
             created = True
 
+            # Create the OAuth User for authentication backend
+            OAuthioUser.objects.create(user=u, provider=provider)
+
         elif user.count() == 1:
             # The user exists. Let's go
             user = user.get()
@@ -166,10 +169,15 @@ class ConnectSocialView(View):
             # If there's a single user with two entries: there's a problem. We take
             # the first one and send a signal
             # FIXME: potential account usurpation.
-            user_registration_problem.send(sender=self, user=user, message="Multiple user entry.")
+            user_registration_problem.send(__name__, user=user, message="Multiple user entry.")
             user = user[0]
 
-        login(request=request, user=user)
-        user_signed_in.send(sender=self, user=user, created=created, avatar=avatar)
+        auth_user = authenticate(user=user, provider=provider)
+        if auth_user is None:
+            user_registration_problem.send(__name__, message="An user try to authenticated with the wrong provider")
+            return {'success': False}
+
+        login(request, auth_user)
+        oauthio_user_signin.send_robust(__name__, user=user, created=created, avatar=avatar)
 
         return {'success': True}

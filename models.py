@@ -59,4 +59,4 @@ class OAuthioUser(models.Model):
         return self.user.username
 
     class Meta:
-        app_label = "oauthio_oauthiouser"
+        app_label = "oauthio"

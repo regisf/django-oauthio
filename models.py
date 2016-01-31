@@ -55,6 +55,8 @@ class OAuthioUser(models.Model):
         help_text=_("From which Social network the user comes")
     )
 
-
     def __unicode__(self):
         return self.user.username
+
+    class Meta:
+        app_label = "oauthio_oauthiouser"

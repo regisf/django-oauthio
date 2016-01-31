@@ -30,7 +30,5 @@ __license__ = 'MIT'
 
 import django.dispatch
 
-oauthio_user_signin = django.dispatch.Signal(providing_args=('user','created', 'avatar', ))
+oauthio_user_signin = django.dispatch.Signal(providing_args=('user', 'created', 'avatar',))
 user_registration_problem = django.dispatch.Signal(providing_args=('user', 'message'))
-
-print "oauthio", oauthio_user_signin

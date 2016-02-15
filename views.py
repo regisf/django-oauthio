@@ -23,6 +23,7 @@
 """
 Using oauth.io services with Django.
 """
+from django.utils import timezone
 
 __author__ = 'Regis FLORET'
 __version__ = '1.0'
@@ -152,7 +153,7 @@ class ConnectSocialView(View):
                 username += "_{}".format(user_username.count() + 1)
 
             # Create the user
-            u = User.objects.create_user(email=email, username=username)
+            u = User.objects.create_user(email=email, username=username, last_login=timezone.now())
             u.first_name = first_name
             u.last_name = last_name
             u.save()

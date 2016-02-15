@@ -72,7 +72,7 @@ def convert_request_to_json(request):
 #
 PROVIDERS = {
     'facebook': 'https://graph.facebook.com/me?fields=id&access_token={}',
-    'google_plus': 'https://www.googleapis.com/plus/v1/people/me?access_token={}',
+    'google': 'https://www.googleapis.com/plus/v1/people/me?access_token={}',
     'linkedin': 'https://api.linkedin.com/v1/people/~?oauth2_access_token={}&format=json',
     'twitter': 'https://api.twitter.com/oauth/access_token',
     'yahoo': 'http://social.yahooapis.com/v1/user/{}/profile?format=json',
@@ -132,14 +132,15 @@ class ConnectSocialView(View):
         # We don't use get_or_create because if there's more than one entry
         # an exception will be raised. Instead, we try to success silently
         # and send a signal.
-        user = User.objects.filter(Q(email=email))
+        user = User.objects.filter(email=email)
         created = False
 
         if user.count() == 0:
             # Don't know the user.
             # Due to the email based retreiving, we seek if the username exists
             # If yes add the number of username + 1 (e.g.: paul, paul_1, paul_2, ...)
-            user_username = User.objects.filter(username__iregex=r'^{}'.format(username))
+            user_username = User.objects.filter(username=username)
+
             if user_username.exists():
                 username += "_{}".format(user_username.count() + 1)
 

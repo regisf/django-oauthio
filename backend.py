@@ -41,4 +41,3 @@ class OAuthIOBackend(object):
         oauth_user = OAuthioUser.objects.filter(user__id=user_id)
         if oauth_user.exists():
             return oauth_user.get().user
-        return None

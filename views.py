@@ -33,7 +33,7 @@ import json
 
 import httplib2
 from django.views.generic import View
-from django.http import HttpResponse
+from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.contrib.auth import login, authenticate
 from django.db.models import Q
@@ -49,8 +49,8 @@ def convert_request_to_json(request):
 
     :param request: The web request
     :rtype request: HttpRequest
-    :return The data or an empty dictionnary
-    :rtype dictionnary
+    :return The data or an empty dictionary
+    :rtype dict
     """
     data = request.POST.get('json', None) if request.method == 'POST' else request.GET.get('json', None)
     data_json = None
@@ -87,26 +87,17 @@ class ConnectSocialView(View):
     Implements only POST method.
     """
     def post(self, request):
-        return HttpResponse(
-            json.dumps(
-                self._post_data(request, convert_request_to_json(request)),
-                ensure_ascii=False
-            ), content_type="application/json"
-        )
-
-    def _post_data(self, request, data):
         """
         Process to the connection.
 
         If the user exists, just login else create h{im,er}
 
         :param request: The django request object
-        :param data: The data coming from the provider via the user browser
         :type request: HttpRequest
-        :type data: dict
         :return: A dictionnary containing at least the key success which is True on success
         :rtype: dict
         """
+        data = convert_request_to_json(request)
 
         # access_token, email and username are required
         # So if one of these aren't present, the app raise a error 500
@@ -115,7 +106,7 @@ class ConnectSocialView(View):
             email = data['email']
             username = data['username']
         except KeyError:
-            return {'success': False, "error": "Missing required field"}
+            return JsonResponse({'success': False, "error": "Missing required field"})
 
         # Optionnal
         first_name = data['first_name'] if 'first_name' in data else ''
@@ -127,7 +118,7 @@ class ConnectSocialView(View):
         if provider in PROVIDERS.keys():
             url = PROVIDERS[provider]
         else:
-            return {'success': False, 'error': "Unknow provider"}
+            return JsonResponse({'success': False, 'error': "Unknow provider"})
 
         # Ask to the provider if the access_token exists and is valid
         http = httplib2.Http()
@@ -136,7 +127,7 @@ class ConnectSocialView(View):
         # The provider don't return a 200 status code on error
         if result['status'] != '200':
             # The google server doesn't grant the user
-            return {'success': False, 'error': "OAuth2 provider don't grant your identity"}
+            return JsonResponse({'success': False, 'error': "OAuth2 provider don't grant your identity"})
 
         # We don't use get_or_create because if there's more than one entry
         # an exception will be raised. Instead, we try to success silently
@@ -176,9 +167,9 @@ class ConnectSocialView(View):
         auth_user = authenticate(user=user, provider=provider)
         if auth_user is None:
             user_registration_problem.send(__name__, message="An user try to authenticated with the wrong provider")
-            return {'success': False}
+            return JsonResponse({'success': False})
 
         login(request, auth_user)
         oauthio_user_signin.send_robust(__name__, user=user, created=created, avatar=avatar)
 
-        return {'success': True}
+        return JsonResponse({'success': True})

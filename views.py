@@ -24,11 +24,6 @@
 Using oauth.io services with Django.
 """
 from django.utils import timezone
-
-__author__ = 'Regis FLORET'
-__version__ = '1.0'
-__license__ = 'MIT'
-
 import json
 
 import httplib2
@@ -36,10 +31,13 @@ from django.views.generic import View
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.contrib.auth import login, authenticate
-from django.db.models import Q
 
 from .signals import oauthio_user_signin, user_registration_problem
 from .models import OAuthioUser
+
+__author__ = 'Regis FLORET'
+__version__ = '1.0'
+__license__ = 'MIT'
 
 
 def convert_request_to_json(request):
@@ -52,7 +50,7 @@ def convert_request_to_json(request):
     :return The data or an empty dictionary
     :rtype dict
     """
-    data = request.POST.get('json', None) if request.method == 'POST' else request.GET.get('json', None)
+    data = request.POST.get('json') if request.method == 'POST' else request.GET.get('json', None)
     data_json = None
 
     if data:
@@ -65,6 +63,7 @@ def convert_request_to_json(request):
         data_json = json.loads(request.body)
 
     return data_json or {}
+
 
 #
 # All the known providers control URL
@@ -86,6 +85,7 @@ class ConnectSocialView(View):
 
     Implements only POST method.
     """
+
     def post(self, request):
         """
         Process to the connection.

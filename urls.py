@@ -31,13 +31,13 @@ __author__ = 'Regis FLORET'
 __version__ = '1.0'
 __license__ = 'MIT'
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
 from .views import ConnectSocialView
-urlpatterns = patterns('',
+urlpatterns = [
     url(
         '^oauthio/connect/$',
         ConnectSocialView.as_view(),
         name="oauthio_connect"
     )
-)
+]
